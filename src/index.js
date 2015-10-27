@@ -105,6 +105,9 @@ function parseOptions(options) {
     results.parseAsync = isNullOrUndefined(parseAsync) ? true : !!parseAsync;
 
     results.extensions = isArray(extensions) ? extensions : isString(extensions) ? [extensions] : ["js", "json"];
+    results.builtin = options.builtin || {};
+    results.mappings = options.mappings || {};
+    results.packageType = options.packageType || "main";
 
     results.functionNames = isArray(functionNames) ? functionNames : [functionNames];
     results.useBraces = isNullOrUndefined(useBraces) ? true : !!useBraces;

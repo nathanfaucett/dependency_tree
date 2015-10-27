@@ -10,6 +10,9 @@ require.async("./ab", function(ab) {
     }
 });
 
+process.nextTick(function() {
+    log(a());
+});
 
 log = require("./log");
 log(a());

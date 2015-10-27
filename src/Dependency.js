@@ -173,9 +173,9 @@ function Dependency_parse(_this, requiredFrom, options, callback) {
                 callback(error);
             } else {
                 _this.content = buffer.toString();
-                contentChunk = parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync);
 
                 options.beforeParse(_this);
+                contentChunk = parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync);
                 Dependency_parseContent(_this, requiredFrom, contentChunk, options, function onParseContent(error) {
                     options.afterParse(_this);
                     callback(error);
