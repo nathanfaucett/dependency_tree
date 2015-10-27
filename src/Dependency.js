@@ -4,9 +4,12 @@ var fs = require("fs"),
     isNull = require("is_null"),
     arrayForEach = require("array-for_each"),
     resolve = require("resolve"),
+    mixin = require("mixin"),
+    filePath = require("file_path"),
     reComment = require("./utils/reComment"),
     isNodeModule = require("./utils/isNodeModule"),
-    parseChunk = require("./utils/parseChunk");
+    parseChunk = require("./utils/parseChunk"),
+    parsePackageMappings = require("./utils/parsePackageMappings");
 
 
 var DependencyPrototype;
@@ -23,6 +26,7 @@ function Dependency() {
     this.path = null;
     this.fullPath = null;
     this.pkg = null;
+    this.mappings = {};
 
     this.chunk = null;
     this.parent = null;
@@ -198,12 +202,21 @@ DependencyPrototype.resolve = function(requiredFrom, options, callback) {
     if (isNull(this.fullPath)) {
         _this = this;
 
+        options.mappings = requiredFrom.mappings;
         resolve(this.path, requiredFrom.fullPath, options, function(error, dependency) {
             if (error) {
                 callback(error);
             } else {
                 _this.fullPath = dependency.fullPath;
                 _this.pkg = dependency.pkg;
+                parsePackageMappings(
+                    _this,
+                    filePath.dirname(_this.fullPath),
+                    options.packageType
+                );
+                if (_this.parent) {
+                    mixin(_this.mappings, _this.parent.mappings);
+                }
                 callback(undefined, _this);
             }
         });
