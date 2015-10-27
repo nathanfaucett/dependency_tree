@@ -1,4 +1,5 @@
 var has = require("has"),
+    getDependencyId = require("./utils/getDependencyId"),
     Dependency = require("./Dependency");
 
 
@@ -46,7 +47,7 @@ ChunkPrototype.getDependency = function(fullPath) {
 };
 
 ChunkPrototype.addDependency = function(dependency) {
-    var fullPath = dependency.fullPath,
+    var fullPath = getDependencyId(dependency),
         dependencies;
 
     if (this.hasDependency(fullPath)) {

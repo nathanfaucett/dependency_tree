@@ -9,6 +9,7 @@ var fs = require("fs"),
     reComment = require("./utils/reComment"),
     isNodeModule = require("./utils/isNodeModule"),
     parseChunk = require("./utils/parseChunk"),
+    getDependencyId = require("./utils/getDependencyId"),
     parsePackageMappings = require("./utils/parsePackageMappings");
 
 
@@ -33,6 +34,7 @@ function Dependency() {
 
     this.children = [];
     this.module = this;
+    this.isNodeModule = false;
 }
 DependencyPrototype = Dependency.prototype;
 
@@ -42,7 +44,8 @@ Dependency.create = function(chunk, path, parent) {
     dependency.chunk = chunk;
     dependency.path = path;
     dependency.parent = parent;
-    dependency.module = (isNull(parent) || isNodeModule(path)) ? dependency : parent.module;
+    dependency.isNodeModule = isNodeModule(path);
+    dependency.module = (isNull(parent) || dependency.isNodeModule) ? dependency : parent.module;
 
     return dependency;
 };
@@ -110,7 +113,7 @@ function parseSubChunks(parent, tree, subChunks, options, callback) {
                     } else {
                         subChunk = tree.createOrGetChunk(path, dependency.fullPath);
 
-                        if (tree.hasDependency(dependency.fullPath)) {
+                        if (tree.hasDependency(getDependencyId(dependency))) {
                             children = parent.children;
                             children[children.length] = tree.getDependency(dependency.fullPath);
                         } else {
@@ -148,8 +151,10 @@ function Dependency_parseContent(_this, requiredFrom, parsedChunk, options, call
             callback(error);
         } else {
             arrayForEach(children, function forEachDependency(dependency, index) {
-                if (tree.hasDependency(dependency.fullPath)) {
-                    children[index] = tree.getDependency(dependency.fullPath);
+                var fullPath = getDependencyId(dependency);
+
+                if (tree.hasDependency(fullPath)) {
+                    children[index] = tree.getDependency(fullPath);
                 } else {
                     chunk.addDependency(dependency);
                 }

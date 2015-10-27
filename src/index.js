@@ -6,6 +6,7 @@ var has = require("has"),
     isFunction = require("is_function"),
     isNullOrUndefined = require("is_null_or_undefined"),
     createIncludeRegExp = require("./utils/createIncludeRegExp"),
+    getDependencyId = require("./utils/getDependencyId"),
     Chunk = require("./Chunk");
 
 
@@ -75,12 +76,13 @@ DependencyTreePrototype.addChunk = function(chunk) {
 };
 
 DependencyTreePrototype.addDependency = function(dependency) {
-    var dependencies = this.dependencies,
+    var fullPath = getDependencyId(dependency),
+        dependencies = this.dependencies,
         index = dependencies.length;
 
     dependency.index = index;
     dependencies[index] = dependency;
-    this.dependencyHash[dependency.fullPath] = dependency;
+    this.dependencyHash[fullPath] = dependency;
 };
 
 DependencyTreePrototype.getDependency = function(fullPath) {
