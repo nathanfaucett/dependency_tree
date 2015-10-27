@@ -47,16 +47,14 @@ ChunkPrototype.getDependency = function(fullPath) {
 
 ChunkPrototype.addDependency = function(dependency) {
     var fullPath = dependency.fullPath,
-        dependencies, index;
+        dependencies;
 
     if (this.hasDependency(fullPath)) {
         throw new Error("Can not have two dependencies with same name " + fullPath);
     } else {
         dependencies = this.dependencies;
-        index = dependencies.length;
-        dependencies[index] = dependency;
+        dependencies[dependencies.length] = dependency;
         this.dependencyHash[fullPath] = dependency;
-        dependency.index = index;
         this.tree.addDependency(dependency);
         return dependency;
     }

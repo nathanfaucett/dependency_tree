@@ -12,6 +12,4 @@ require.async("./ab", function(ab) {
 
 
 log = require("./log");
-
 log(a());
-log(abc());

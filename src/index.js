@@ -1,6 +1,7 @@
 var has = require("has"),
     filePath = require("file_path"),
     isArray = require("is_array"),
+    isString = require("is_string"),
     emptyFunction = require("empty_function"),
     isFunction = require("is_function"),
     isNullOrUndefined = require("is_null_or_undefined"),
@@ -18,7 +19,8 @@ function DependencyTree(path, options) {
     this.path = path;
     this.fullPath = filePath.isAbsolute(path) ? path : filePath.join(process.cwd(), path);
     this.options = parseOptions(options || {});
-    this.dependencies = null;
+    this.dependencyHash = null;
+    this.dependencies = [];
     this.chunkHash = null;
     this.chunks = [];
 }
@@ -30,7 +32,8 @@ DependencyTree.create = function(path, options) {
 DependencyTreePrototype = DependencyTree.prototype;
 
 DependencyTreePrototype.clear = function() {
-    this.dependencies = {};
+    this.dependencyHash = {};
+    this.dependencies.length = 0;
     this.chunkHash = {};
     this.chunks.length = 0;
     return this;
@@ -72,15 +75,20 @@ DependencyTreePrototype.addChunk = function(chunk) {
 };
 
 DependencyTreePrototype.addDependency = function(dependency) {
-    this.dependencies[dependency.fullPath] = dependency;
+    var dependencies = this.dependencies,
+        index = dependencies.length;
+
+    dependency.index = index;
+    dependencies[index] = dependency;
+    this.dependencyHash[dependency.fullPath] = dependency;
 };
 
 DependencyTreePrototype.getDependency = function(fullPath) {
-    return this.dependencies[fullPath];
+    return this.dependencyHash[fullPath];
 };
 
 DependencyTreePrototype.hasDependency = function(fullPath) {
-    return !!this.dependencies[fullPath];
+    return !!this.dependencyHash[fullPath];
 };
 
 function parseOptions(options) {
@@ -96,7 +104,7 @@ function parseOptions(options) {
     results.afterParse = isFunction(afterParse) ? afterParse : emptyFunction;
     results.parseAsync = isNullOrUndefined(parseAsync) ? true : !!parseAsync;
 
-    results.extensions = isArray(extensions) ? extensions : [extensions];
+    results.extensions = isArray(extensions) ? extensions : isString(extensions) ? [extensions] : ["js", "json"];
 
     results.functionNames = isArray(functionNames) ? functionNames : [functionNames];
     results.useBraces = isNullOrUndefined(useBraces) ? true : !!useBraces;

@@ -2,8 +2,9 @@ var fs = require("fs"),
     has = require("has"),
     keys = require("keys"),
     isNull = require("is_null"),
-    filePath = require("file_path"),
     arrayForEach = require("array-for_each"),
+    resolve = require("resolve"),
+    reComment = require("./utils/reComment"),
     isNodeModule = require("./utils/isNodeModule"),
     parseChunk = require("./utils/parseChunk");
 
@@ -21,6 +22,7 @@ function Dependency() {
 
     this.path = null;
     this.fullPath = null;
+    this.pkg = null;
 
     this.chunk = null;
     this.parent = null;
@@ -41,7 +43,7 @@ Dependency.create = function(chunk, path, parent) {
     return dependency;
 };
 
-function resolveChildren(children, callback) {
+function resolveChildren(children, requiredFrom, options, callback) {
     var called = false,
         index = 0,
         length = children.length;
@@ -53,29 +55,32 @@ function resolveChildren(children, callback) {
                 callback(error);
             }
         } else {
-            children[index++].resolve(next);
+            children[index++].resolve(requiredFrom, options, next);
         }
     }());
 }
 
-function parseChildren(children, callback) {
+function parseChildren(children, options, callback) {
     var called = false,
         index = 0,
         length = children.length;
 
     (function next(error) {
+        var child;
+
         if (error || index === length) {
             if (!called) {
                 called = true;
                 callback(error);
             }
         } else {
-            children[index++].parse(next);
+            child = children[index++];
+            Dependency_parse(child, options, next);
         }
     }());
 }
 
-function parseSubChunks(parent, tree, subChunks, callback) {
+function parseSubChunks(parent, tree, subChunks, options, callback) {
     var called = false,
         subChunksKeys = keys(subChunks),
         index = 0,
@@ -93,27 +98,22 @@ function parseSubChunks(parent, tree, subChunks, callback) {
             path = subChunksKeys[index++];
 
             if (has(subChunks, path)) {
-                Dependency.create(null, path, parent).resolve(function onResolve(error, dependency) {
+                Dependency.create(null, path, parent).resolve(parent, options, function onResolve(error, dependency) {
                     var children, subChunk;
 
                     if (error) {
                         next(error);
                     } else {
-                        children = dependency.children;
                         subChunk = tree.createOrGetChunk(path, dependency.fullPath);
 
                         if (tree.hasDependency(dependency.fullPath)) {
+                            children = parent.children;
                             children[children.length] = tree.getDependency(dependency.fullPath);
+                            Dependency_parseContent(dependency, subChunks[path], parent, options, next);
                         } else {
                             dependency.chunk = subChunk;
                             subChunk.addDependency(dependency);
-                            dependency.parse(function onParse(error) {
-                                if (error) {
-                                    next(error);
-                                } else {
-                                    Dependency_parseChunkedContent(dependency, subChunks[path], next);
-                                }
-                            });
+                            Dependency_parseContent(dependency, subChunks[path], parent, options, next);
                         }
                     }
                 });
@@ -124,17 +124,16 @@ function parseSubChunks(parent, tree, subChunks, callback) {
     }());
 }
 
-function Dependency_parseChunkedContent(_this, parsedChunk, callback) {
+function Dependency_parseContent(_this, parsedChunk, requiredFrom, options, callback) {
     var chunk = _this.chunk,
         tree = chunk.tree,
-        options = tree.options,
         children = _this.children;
 
-    parsedChunk.content.replace(options.reInclude, function(match, include, fn, path) {
+    parsedChunk.content.replace(options.reInclude, function onReplace(match, include, fn, path) {
         children[children.length] = Dependency.create(chunk, path, _this);
     });
 
-    resolveChildren(children, function onResolveChildren(error) {
+    resolveChildren(children, requiredFrom, options, function onResolveChildren(error) {
         if (error) {
             callback(error);
         } else {
@@ -146,11 +145,11 @@ function Dependency_parseChunkedContent(_this, parsedChunk, callback) {
                 }
             });
 
-            parseChildren(children, function onParseChildren(error) {
+            parseSubChunks(_this, tree, parsedChunk.sub, options, function onParseSubChunks(error) {
                 if (error) {
                     callback(error);
                 } else {
-                    parseSubChunks(_this, tree, parsedChunk.sub, callback);
+                    parseChildren(children, options, callback);
                 }
             });
         }
@@ -159,54 +158,57 @@ function Dependency_parseChunkedContent(_this, parsedChunk, callback) {
     return _this;
 }
 
-function Dependency_parse(_this, callback) {
-    var options = _this.chunk.tree.options;
-
-    options.beforeParse(_this);
-    Dependency_parseChunkedContent(_this, parseChunk(_this.path, _this.content, options.reInclude, options.parseAsync), callback);
-    options.afterParse(_this);
-
-    return _this;
-}
-
-DependencyPrototype.parse = function(callback) {
-    var _this = this;
-
-    fs.readFile(this.fullPath, function(error, buffer) {
+function Dependency_parse(_this, options, callback) {
+    fs.readFile(_this.fullPath, function onReadFile(error, buffer) {
         if (error) {
             callback(error);
         } else {
             _this.content = buffer.toString();
-            Dependency_parse(_this, callback);
+
+            options.beforeParse(_this);
+            Dependency_parseContent(
+                _this,
+                parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync),
+                _this,
+                options,
+                function onParseContent(error) {
+                    options.afterParse(_this);
+                    callback(error);
+                }
+            );
         }
     });
+}
 
+DependencyPrototype.parse = function(callback) {
+    var options;
+
+    if (isNull(this.content)) {
+        options = this.chunk.tree.options;
+        Dependency_parse(this, options, callback);
+    } else {
+        callback(undefined);
+    }
     return this;
 };
 
-DependencyPrototype.resolve = function(callback) {
-    if (isNodeModule(this.path)) {
-        Dependency_resolveNodeModule(this, callback);
+DependencyPrototype.resolve = function(requiredFrom, options, callback) {
+    var _this;
+
+    if (isNull(this.fullPath)) {
+        _this = this;
+
+        resolve(this.path, requiredFrom.fullPath, options, function(error, dependency) {
+            if (error) {
+                callback(error);
+            } else {
+                _this.fullPath = dependency.fullPath;
+                _this.pkg = dependency.pkg;
+                callback(undefined, _this);
+            }
+        });
     } else {
-        Dependency_resolve(this, callback);
+        callback(undefined, this);
     }
+    return this;
 };
-
-function Dependency_resolveNodeModule(_this, callback) {
-    callback(new Error("node modules not supported yet."));
-}
-
-function Dependency_resolve(_this, callback) {
-    var parent = _this.parent,
-        parentDirname = filePath.dirname(parent.fullPath),
-        fullPath = filePath.join(parentDirname, _this.path) + ".js";
-
-    fs.stat(fullPath, function(error) {
-        if (error) {
-            callback(error);
-        } else {
-            _this.fullPath = fullPath;
-            callback(undefined, _this);
-        }
-    });
-}

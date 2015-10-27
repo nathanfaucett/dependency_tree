@@ -38,6 +38,7 @@
     "is_null_or_undefined": "git://github.com/nathanfaucett/is_null_or_undefined.git",
     "is_object": "git://github.com/nathanfaucett/is_object.git",
     "is_string": "git://github.com/nathanfaucett/is_string.git",
-    "keys": "git://github.com/nathanfaucett/keys.git"
+    "keys": "git://github.com/nathanfaucett/keys.git",
+    "resolve": "git://github.com/nathanfaucett/resolve.git"
   }
 }
