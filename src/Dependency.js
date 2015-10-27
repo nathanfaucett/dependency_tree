@@ -75,7 +75,7 @@ function parseChildren(children, options, callback) {
             }
         } else {
             child = children[index++];
-            Dependency_parse(child, options, next);
+            child.parse(next);
         }
     }());
 }
@@ -109,12 +109,18 @@ function parseSubChunks(parent, tree, subChunks, options, callback) {
                         if (tree.hasDependency(dependency.fullPath)) {
                             children = parent.children;
                             children[children.length] = tree.getDependency(dependency.fullPath);
-                            Dependency_parseContent(dependency, subChunks[path], parent, options, next);
                         } else {
                             dependency.chunk = subChunk;
                             subChunk.addDependency(dependency);
-                            Dependency_parseContent(dependency, subChunks[path], parent, options, next);
                         }
+
+                        Dependency_parse(dependency, dependency, options, function onParse(error) {
+                            if (error) {
+                                next(error);
+                            } else {
+                                Dependency_parseContent(dependency, parent, subChunks[path], options, next);
+                            }
+                        });
                     }
                 });
             } else {
@@ -124,7 +130,7 @@ function parseSubChunks(parent, tree, subChunks, options, callback) {
     }());
 }
 
-function Dependency_parseContent(_this, parsedChunk, requiredFrom, options, callback) {
+function Dependency_parseContent(_this, requiredFrom, parsedChunk, options, callback) {
     var chunk = _this.chunk,
         tree = chunk.tree,
         children = _this.children;
@@ -137,9 +143,9 @@ function Dependency_parseContent(_this, parsedChunk, requiredFrom, options, call
         if (error) {
             callback(error);
         } else {
-            arrayForEach(children, function forEachDependency(dependency) {
+            arrayForEach(children, function forEachDependency(dependency, index) {
                 if (tree.hasDependency(dependency.fullPath)) {
-                    dependency = tree.getDependency(dependency.fullPath);
+                    children[index] = tree.getDependency(dependency.fullPath);
                 } else {
                     chunk.addDependency(dependency);
                 }
@@ -158,37 +164,31 @@ function Dependency_parseContent(_this, parsedChunk, requiredFrom, options, call
     return _this;
 }
 
-function Dependency_parse(_this, options, callback) {
-    fs.readFile(_this.fullPath, function onReadFile(error, buffer) {
-        if (error) {
-            callback(error);
-        } else {
-            _this.content = buffer.toString();
+function Dependency_parse(_this, requiredFrom, options, callback) {
+    if (isNull(_this.content)) {
+        fs.readFile(_this.fullPath, function onReadFile(error, buffer) {
+            var contentChunk;
 
-            options.beforeParse(_this);
-            Dependency_parseContent(
-                _this,
-                parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync),
-                _this,
-                options,
-                function onParseContent(error) {
+            if (error) {
+                callback(error);
+            } else {
+                _this.content = buffer.toString();
+                contentChunk = parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync);
+
+                options.beforeParse(_this);
+                Dependency_parseContent(_this, requiredFrom, contentChunk, options, function onParseContent(error) {
                     options.afterParse(_this);
                     callback(error);
-                }
-            );
-        }
-    });
-}
-
-DependencyPrototype.parse = function(callback) {
-    var options;
-
-    if (isNull(this.content)) {
-        options = this.chunk.tree.options;
-        Dependency_parse(this, options, callback);
+                });
+            }
+        });
     } else {
         callback(undefined);
     }
+}
+
+DependencyPrototype.parse = function(callback) {
+    Dependency_parse(this, this, this.chunk.tree.options, callback);
     return this;
 };
 

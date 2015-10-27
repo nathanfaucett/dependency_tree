@@ -1,8 +1,11 @@
+var ContentChunk = require("./ContentChunk");
+
+
 module.exports = parseChunk;
 
 
 function parseChunk(path, string, reInclude, parseAsync) {
-    var chunk = new Chunk(path);
+    var chunk = new ContentChunk(path);
 
     if (parseAsync) {
         parseAsyncChunk(chunk, path, string, reInclude);
@@ -23,7 +26,7 @@ function parseAsyncChunk(chunk, path, string, reInclude) {
         var start, end, subChunk;
 
         if (fn === "async") {
-            subChunk = new Chunk(path);
+            subChunk = new ContentChunk(path);
 
             start = index + match.length;
             end = getLastIndexOf(string, index);
@@ -79,10 +82,4 @@ function getLastIndexOf(string, index) {
     }
 
     return index;
-}
-
-function Chunk(path) {
-    this.path = path;
-    this.content = "";
-    this.sub = {};
 }

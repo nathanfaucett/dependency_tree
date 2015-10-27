@@ -1,9 +1,10 @@
-var a = require("../../a");
+var a = require("../../a"),
+    b = require("./b");
 
 
 module.exports = ab;
 
 
 function ab() {
-    return a() + "b";
+    return a() + b();
 }
