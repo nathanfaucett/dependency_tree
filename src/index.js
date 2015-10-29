@@ -22,7 +22,7 @@ function DependencyTree(path, options) {
 
     options = parseOptions(options || {});
 
-    rootDependency = resolve(path, filePath.isAbsolute(path) ? "/" : process.cwd(), options);
+    rootDependency = resolve(path, filePath.isAbsolute(path) ? "/" : (process.cwd() + "/comn.js"), options);
 
     this.path = path;
     this.id = getDependencyId(rootDependency, rootDependency);
