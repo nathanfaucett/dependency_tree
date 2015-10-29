@@ -35,12 +35,15 @@ function parseAsyncChunk(chunk, path, string, reInclude) {
             array[array.length] = end;
 
             parseAsyncChunk(subChunk, path, string.substring(start, end), reInclude);
-            subChunks = subChunks || {};
-            subChunks[path] = subChunk;
+            subChunks = subChunks || (chunk.sub = {});
+
+            if (subChunks[path]) {
+                subChunks[path].merge(subChunk);
+            } else {
+                subChunks[path] = subChunk;
+            }
         }
     });
-
-    chunk.sub = subChunks;
 
     i = 0;
     il = array.length;
