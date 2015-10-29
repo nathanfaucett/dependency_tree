@@ -29,16 +29,12 @@
   "dependencies": {
     "array-for_each": "git://github.com/nathanfaucett/array-for_each.git",
     "empty_function": "git://github.com/nathanfaucett/empty_function.git",
-    "event_emitter": "git://github.com/nathanfaucett/event_emitter.git",
     "file_path": "git://github.com/nathanfaucett/file_path.git",
     "has": "git://github.com/nathanfaucett/has.git",
     "is_array": "git://github.com/nathanfaucett/is_array.git",
     "is_function": "git://github.com/nathanfaucett/is_function.git",
-    "is_null": "git://github.com/nathanfaucett/is_null.git",
     "is_null_or_undefined": "git://github.com/nathanfaucett/is_null_or_undefined.git",
-    "is_object": "git://github.com/nathanfaucett/is_object.git",
     "is_string": "git://github.com/nathanfaucett/is_string.git",
-    "keys": "git://github.com/nathanfaucett/keys.git",
     "mixin": "git://github.com/nathanfaucett/mixin.git",
     "resolve": "git://github.com/nathanfaucett/resolve.git"
   }

@@ -1,13 +1,10 @@
 var fs = require("fs"),
     has = require("has"),
-    keys = require("keys"),
-    isNull = require("is_null"),
     arrayForEach = require("array-for_each"),
     resolve = require("resolve"),
     mixin = require("mixin"),
     filePath = require("file_path"),
     reComment = require("./utils/reComment"),
-    isNodeModule = require("./utils/isNodeModule"),
     parseChunk = require("./utils/parseChunk"),
     getDependencyId = require("./utils/getDependencyId"),
     parsePackageMappings = require("./utils/parsePackageMappings");
@@ -27,14 +24,18 @@ function Dependency() {
     this.path = null;
     this.fullPath = null;
     this.pkg = null;
+    this.pkgFullPath = null;
     this.mappings = {};
 
     this.chunk = null;
     this.parent = null;
 
+    this.childHash = {};
     this.children = [];
     this.module = this;
-    this.isNodeModule = false;
+
+    this.isParsed = false;
+    this.isResolved = false;
 }
 DependencyPrototype = Dependency.prototype;
 
@@ -44,189 +45,135 @@ Dependency.create = function(chunk, path, parent) {
     dependency.chunk = chunk;
     dependency.path = path;
     dependency.parent = parent;
-    dependency.isNodeModule = isNodeModule(path);
-    dependency.module = (isNull(parent) || dependency.isNodeModule) ? dependency : parent.module;
 
     return dependency;
 };
 
-function resolveChildren(children, requiredFrom, options, callback) {
-    var called = false,
-        index = 0,
-        length = children.length;
+DependencyPrototype.addDependency = function(dependency) {
+    var id = dependency.id,
+        children;
 
-    (function next(error) {
-        if (error || index === length) {
-            if (!called) {
-                called = true;
-                callback(error);
-            }
-        } else {
-            children[index++].resolve(requiredFrom, options, next);
-        }
-    }());
-}
+    if (this.hasDependency(id)) {
+        throw new Error("Can not have two children with same id " + id);
+    } else {
+        children = this.children;
+        children[children.length] = dependency;
+        this.childHash[id] = dependency;
+        return dependency;
+    }
+};
 
-function parseChildren(children, options, callback) {
-    var called = false,
-        index = 0,
-        length = children.length;
+DependencyPrototype.getDependency = function(id) {
+    return this.childHash[id];
+};
 
-    (function next(error) {
-        var child;
+DependencyPrototype.hasDependency = function(id) {
+    return !!this.childHash[id];
+};
 
-        if (error || index === length) {
-            if (!called) {
-                called = true;
-                callback(error);
-            }
-        } else {
-            child = children[index++];
-            child.parse(next);
-        }
-    }());
-}
+function parseSubChunks(parent, tree, subChunks, options) {
+    var localHas = has,
+        path, dependency;
 
-function parseSubChunks(parent, tree, subChunks, options, callback) {
-    var called = false,
-        subChunksKeys = keys(subChunks),
-        index = 0,
-        length = subChunksKeys.length;
+    for (path in subChunks) {
+        if (localHas(subChunks, path)) {
+            dependency = Dependency.create(null, path, parent).resolve(parent, options);
 
-    (function next(error) {
-        var path;
+            subChunk = tree.createOrGetChunk(path, dependency.fullPath, dependency.id);
 
-        if (error || index === length) {
-            if (!called) {
-                called = true;
-                callback(error);
-            }
-        } else {
-            path = subChunksKeys[index++];
-
-            if (has(subChunks, path)) {
-                Dependency.create(null, path, parent).resolve(parent, options, function onResolve(error, dependency) {
-                    var children, subChunk;
-
-                    if (error) {
-                        next(error);
-                    } else {
-                        subChunk = tree.createOrGetChunk(path, dependency.fullPath);
-
-                        if (tree.hasDependency(getDependencyId(dependency))) {
-                            children = parent.children;
-                            children[children.length] = tree.getDependency(dependency.fullPath);
-                        } else {
-                            dependency.chunk = subChunk;
-                            subChunk.addDependency(dependency);
-                        }
-
-                        Dependency_parse(dependency, dependency, options, function onParse(error) {
-                            if (error) {
-                                next(error);
-                            } else {
-                                Dependency_parseContent(dependency, parent, subChunks[path], options, next);
-                            }
-                        });
-                    }
-                });
+            if (tree.hasDependency(dependency.id)) {
+                dependency = tree.getDependency(dependency.id);
             } else {
-                next();
+                dependency.chunk = subChunk;
+                subChunk.addDependency(dependency);
             }
+
+            parent.addDependency(dependency);
+
+            dependency.parse();
+
+            Dependency_parse(dependency, parent, subChunks[path], options);
         }
-    }());
+    }
 }
 
-function Dependency_parseContent(_this, requiredFrom, parsedChunk, options, callback) {
+function Dependency_parse(_this, requiredFrom, parsedChunk, options) {
     var chunk = _this.chunk,
         tree = chunk.tree,
-        children = _this.children;
+        children = [];
 
     parsedChunk.content.replace(options.reInclude, function onReplace(match, include, fn, path) {
         children[children.length] = Dependency.create(chunk, path, _this);
     });
 
-    resolveChildren(children, requiredFrom, options, function onResolveChildren(error) {
-        if (error) {
-            callback(error);
+    arrayForEach(children, function forEachDependency(dependency) {
+        dependency.resolve(requiredFrom, options);
+
+        if (tree.hasDependency(dependency.id)) {
+            dependency = tree.getDependency(dependency.id);
         } else {
-            arrayForEach(children, function forEachDependency(dependency, index) {
-                var fullPath = getDependencyId(dependency);
-
-                if (tree.hasDependency(fullPath)) {
-                    children[index] = tree.getDependency(fullPath);
-                } else {
-                    chunk.addDependency(dependency);
-                }
-            });
-
-            parseSubChunks(_this, tree, parsedChunk.sub, options, function onParseSubChunks(error) {
-                if (error) {
-                    callback(error);
-                } else {
-                    parseChildren(children, options, callback);
-                }
-            });
+            chunk.addDependency(dependency);
         }
+
+        _this.addDependency(dependency);
+    });
+
+    parseSubChunks(_this, tree, parsedChunk.sub, options);
+
+    arrayForEach(_this.children, function forEachDependency(dependency) {
+        dependency.parse();
     });
 
     return _this;
 }
 
-function Dependency_parse(_this, requiredFrom, options, callback) {
-    if (isNull(_this.content)) {
-        fs.readFile(_this.fullPath, function onReadFile(error, buffer) {
-            var contentChunk;
+DependencyPrototype.parse = function() {
+    var options, buffer, contentChunk;
 
-            if (error) {
-                callback(error);
-            } else {
-                _this.content = buffer.toString();
+    if (this.isParsed === false) {
+        this.isParsed = true;
 
-                options.beforeParse(_this);
-                contentChunk = parseChunk(_this.path, _this.content.replace(reComment, ""), options.reInclude, options.parseAsync);
-                Dependency_parseContent(_this, requiredFrom, contentChunk, options, function onParseContent(error) {
-                    options.afterParse(_this);
-                    callback(error);
-                });
-            }
-        });
-    } else {
-        callback(undefined);
+        buffer = fs.readFileSync(this.fullPath);
+        this.content = buffer.toString();
+
+        options = this.chunk.tree.options;
+        options.beforeParse(this);
+        contentChunk = parseChunk(this.path, this.content.replace(reComment, ""), options.reInclude, options.parseAsync);
+        Dependency_parse(this, this, contentChunk, options);
+        options.afterParse(this);
     }
-}
 
-DependencyPrototype.parse = function(callback) {
-    Dependency_parse(this, this, this.chunk.tree.options, callback);
     return this;
 };
 
-DependencyPrototype.resolve = function(requiredFrom, options, callback) {
-    var _this;
+DependencyPrototype.resolve = function(requiredFrom, options) {
+    var mappings, dependency;
 
-    if (isNull(this.fullPath)) {
-        _this = this;
+    if (this.isResolved === false) {
+        this.isResolved = true;
 
+        mappings = options.mappings;
         options.mappings = requiredFrom.mappings;
-        resolve(this.path, requiredFrom.fullPath, options, function(error, dependency) {
-            if (error) {
-                callback(error);
-            } else {
-                _this.fullPath = dependency.fullPath;
-                _this.pkg = dependency.pkg;
-                parsePackageMappings(
-                    _this,
-                    filePath.dirname(_this.fullPath),
-                    options.packageType
-                );
-                if (_this.parent) {
-                    mixin(_this.mappings, _this.parent.mappings);
-                }
-                callback(undefined, _this);
-            }
-        });
-    } else {
-        callback(undefined, this);
+        dependency = resolve(this.path, requiredFrom.fullPath, options);
+        options.mappings = mappings;
+
+        this.fullPath = dependency.fullPath;
+        this.pkgFullPath = dependency.pkgFullPath;
+        this.pkg = dependency.pkg;
+        this.module = (this.pkg || !this.parent) ? this : this.parent.module;
+
+        this.id = getDependencyId(this, this.module);
+
+        parsePackageMappings(
+            this,
+            filePath.dirname(this.fullPath),
+            options.packageType
+        );
+
+        if (this.parent) {
+            mixin(this.mappings, this.parent.mappings);
+        }
     }
+
     return this;
 };

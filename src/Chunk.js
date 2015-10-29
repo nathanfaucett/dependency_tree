@@ -1,5 +1,4 @@
 var has = require("has"),
-    getDependencyId = require("./utils/getDependencyId"),
     Dependency = require("./Dependency");
 
 
@@ -11,51 +10,54 @@ module.exports = Chunk;
 
 function Chunk() {
     this.tree = null;
+    this.id = null;
     this.path = null;
     this.fullPath = null;
     this.dependencyHash = {};
     this.dependencies = [];
 }
 
-Chunk.create = function(tree, path, fullPath) {
+Chunk.create = function(tree, path, fullPath, id) {
     var chunk = new Chunk();
 
     chunk.tree = tree;
     chunk.path = path;
     chunk.fullPath = fullPath;
+    chunk.id = id;
 
     return chunk;
 };
 
 ChunkPrototype = Chunk.prototype;
 
-ChunkPrototype.parse = function(callback) {
+ChunkPrototype.parse = function() {
     var dependency = Dependency.create(this, this.path, null);
 
+    dependency.id = this.id;
     dependency.fullPath = this.fullPath;
-    this.addDependency(dependency).parse(callback);
+
+    this.addDependency(dependency).parse();
 
     return this;
 };
 
-ChunkPrototype.hasDependency = function(fullPath) {
-    return has(this.dependencyHash, fullPath);
+ChunkPrototype.hasDependency = function(id) {
+    return has(this.dependencyHash, id);
 };
 
-ChunkPrototype.getDependency = function(fullPath) {
-    return this.dependencyHash[fullPath];
+ChunkPrototype.getDependency = function(id) {
+    return this.dependencyHash[id];
 };
 
 ChunkPrototype.addDependency = function(dependency) {
-    var fullPath = getDependencyId(dependency),
-        dependencies;
+    var dependencies;
 
-    if (this.hasDependency(fullPath)) {
-        throw new Error("Can not have two dependencies with same name " + fullPath);
+    if (this.hasDependency(dependency.id)) {
+        throw new Error("Can not have two dependencies with same id " + dependency.id);
     } else {
         dependencies = this.dependencies;
         dependencies[dependencies.length] = dependency;
-        this.dependencyHash[fullPath] = dependency;
+        this.dependencyHash[dependency.id] = dependency;
         this.tree.addDependency(dependency);
         return dependency;
     }

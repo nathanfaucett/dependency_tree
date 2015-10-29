@@ -5,6 +5,7 @@ var has = require("has"),
     emptyFunction = require("empty_function"),
     isFunction = require("is_function"),
     isNullOrUndefined = require("is_null_or_undefined"),
+    resolve = require("resolve"),
     createIncludeRegExp = require("./utils/createIncludeRegExp"),
     getDependencyId = require("./utils/getDependencyId"),
     Chunk = require("./Chunk");
@@ -17,8 +18,15 @@ module.exports = DependencyTree;
 
 
 function DependencyTree(path, options) {
+    var rootDependency;
+
+    options = parseOptions(options || {});
+
+    rootDependency = resolve(path, filePath.isAbsolute(path) ? "/" : process.cwd(), options);
+
     this.path = path;
-    this.fullPath = filePath.isAbsolute(path) ? path : filePath.join(process.cwd(), path);
+    this.id = getDependencyId(rootDependency, rootDependency);
+    this.fullPath = rootDependency.fullPath;
     this.options = parseOptions(options || {});
     this.dependencyHash = null;
     this.dependencies = [];
@@ -40,57 +48,63 @@ DependencyTreePrototype.clear = function() {
     return this;
 };
 
-DependencyTreePrototype.parse = function(callback) {
-    this.clear().addChunk(Chunk.create(this, this.path, this.fullPath)).parse(callback);
+DependencyTreePrototype.parse = function() {
+    this.clear().addChunk(Chunk.create(this, this.path, this.fullPath, this.id)).parse();
     return this;
 };
 
-DependencyTreePrototype.hasChunk = function(fullPath) {
-    return has(this.chunkHash, fullPath);
+DependencyTreePrototype.hasChunk = function(id) {
+    return has(this.chunkHash, id);
 };
 
-DependencyTreePrototype.getChunk = function(fullPath) {
-    return this.chunkHash[fullPath];
+DependencyTreePrototype.getChunk = function(id) {
+    return this.chunkHash[id];
 };
 
-DependencyTreePrototype.createOrGetChunk = function(path, fullPath) {
-    if (this.hasChunk(fullPath)) {
-        return this.getChunk(fullPath);
+DependencyTreePrototype.createOrGetChunk = function(path, fullPath, id) {
+    if (this.hasChunk(id)) {
+        return this.getChunk(id);
     } else {
         return this.addChunk(Chunk.create(this, path, fullPath));
     }
 };
 
 DependencyTreePrototype.addChunk = function(chunk) {
-    var fullPath = chunk.fullPath,
+    var id = chunk.id,
         chunks;
 
-    if (this.hasChunk(fullPath)) {
-        throw new Error("Can not have two chunks with same name " + fullPath);
+    if (this.hasChunk(id)) {
+        throw new Error("Can not have two chunks with same id " + id);
     } else {
         chunks = this.chunks;
         chunks[chunks.length] = chunk;
-        this.chunkHash[fullPath] = chunk;
+        this.chunkHash[id] = chunk;
         return chunk;
     }
 };
 
 DependencyTreePrototype.addDependency = function(dependency) {
-    var fullPath = getDependencyId(dependency),
-        dependencies = this.dependencies,
+    var id = dependency.id,
+        dependencies, index;
+
+    if (this.hasDependency(id)) {
+        throw new Error("Can not have two dependencies with same id " + id);
+    } else {
+        dependencies = this.dependencies;
         index = dependencies.length;
-
-    dependency.index = index;
-    dependencies[index] = dependency;
-    this.dependencyHash[fullPath] = dependency;
+        dependency.index = index;
+        dependencies[index] = dependency;
+        this.dependencyHash[id] = dependency;
+        return dependency;
+    }
 };
 
-DependencyTreePrototype.getDependency = function(fullPath) {
-    return this.dependencyHash[fullPath];
+DependencyTreePrototype.getDependency = function(id) {
+    return this.dependencyHash[id];
 };
 
-DependencyTreePrototype.hasDependency = function(fullPath) {
-    return !!this.dependencyHash[fullPath];
+DependencyTreePrototype.hasDependency = function(id) {
+    return !!this.dependencyHash[id];
 };
 
 function parseOptions(options) {
@@ -115,6 +129,7 @@ function parseOptions(options) {
     results.useBraces = isNullOrUndefined(useBraces) ? true : !!useBraces;
 
     results.reInclude = createIncludeRegExp(results.functionNames, results.useBraces);
+    results.throwError = true;
 
     return results;
 }
