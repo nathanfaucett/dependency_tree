@@ -1,5 +1,6 @@
 var fs = require("fs"),
     has = require("has"),
+    isNull = require("is_null"),
     arrayForEach = require("array-for_each"),
     resolve = require("resolve"),
     mixin = require("mixin"),
@@ -17,6 +18,8 @@ module.exports = Dependency;
 
 
 function Dependency() {
+
+    this.id = null;
 
     this.index = null;
     this.content = null;
@@ -51,16 +54,14 @@ Dependency.create = function(chunk, path, parent) {
 
 DependencyPrototype.addDependency = function(dependency) {
     var id = dependency.id,
-        children;
-
-    if (this.hasDependency(id)) {
-        throw new Error("Can not have two children with same id " + id);
-    } else {
         children = this.children;
+
+    if (!this.hasDependency(id)) {
         children[children.length] = dependency;
         this.childHash[id] = dependency;
-        return dependency;
     }
+
+    return dependency;
 };
 
 DependencyPrototype.getDependency = function(id) {
@@ -88,7 +89,9 @@ function parseSubChunks(parent, tree, subChunks, options) {
                 subChunk.addDependency(dependency);
             }
 
-            parent.addDependency(dependency);
+            if (!parent.hasDependency(dependency.id)) {
+                parent.addDependency(dependency);
+            }
 
             dependency.parse();
 
@@ -118,7 +121,9 @@ function Dependency_parse(_this, requiredFrom, parsedChunk, options) {
         _this.addDependency(dependency);
     });
 
-    parseSubChunks(_this, tree, parsedChunk.sub, options);
+    if (!isNull(parsedChunk.sub)) {
+        parseSubChunks(_this, tree, parsedChunk.sub, options);
+    }
 
     arrayForEach(_this.children, function forEachDependency(dependency) {
         dependency.parse();
@@ -147,31 +152,32 @@ DependencyPrototype.parse = function() {
 };
 
 DependencyPrototype.resolve = function(requiredFrom, options) {
-    var mappings, dependency;
+    var parent, dependency;
 
     if (this.isResolved === false) {
         this.isResolved = true;
 
-        mappings = options.mappings;
+        parent = this.parent;
         options.mappings = requiredFrom.mappings;
         dependency = resolve(this.path, requiredFrom.fullPath, options);
-        options.mappings = mappings;
 
         this.fullPath = dependency.fullPath;
         this.pkgFullPath = dependency.pkgFullPath;
         this.pkg = dependency.pkg;
-        this.module = (this.pkg || !this.parent) ? this : this.parent.module;
+        this.module = (this.pkg || !parent) ? this : parent.module;
 
         this.id = getDependencyId(this, this.module);
 
-        parsePackageMappings(
-            this,
-            filePath.dirname(this.fullPath),
-            options.packageType
-        );
+        if (this.pkg) {
+            parsePackageMappings(
+                this,
+                filePath.dirname(this.fullPath),
+                options.packageType
+            );
+        }
 
-        if (this.parent) {
-            mixin(this.mappings, this.parent.mappings);
+        if (parent) {
+            mixin(this.mappings, parent.mappings);
         }
     }
 

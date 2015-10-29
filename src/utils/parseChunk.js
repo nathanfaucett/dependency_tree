@@ -18,9 +18,9 @@ function parseChunk(path, string, reInclude, parseAsync) {
 
 function parseAsyncChunk(chunk, path, string, reInclude) {
     var array = [],
-        subChunks = chunk.sub,
         start = 0,
-        end = 0;
+        end = 0,
+        subChunks = null;
 
     string.replace(reInclude, function onReplace(match, include, fn, path, index) {
         var start, end, subChunk;
@@ -35,9 +35,12 @@ function parseAsyncChunk(chunk, path, string, reInclude) {
             array[array.length] = end;
 
             parseAsyncChunk(subChunk, path, string.substring(start, end), reInclude);
+            subChunks = subChunks || {};
             subChunks[path] = subChunk;
         }
     });
+
+    chunk.sub = subChunks;
 
     i = 0;
     il = array.length;

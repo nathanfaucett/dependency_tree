@@ -5,9 +5,11 @@ module.exports = getDependencyId;
 
 
 function getDependencyId(dependency, dependencyModule) {
-    if (dependencyModule.pkgFullPath && (dependencyModule.pkg && dependencyModule.pkg.name)) {
+    var pkg = dependencyModule.pkg;
+
+    if (dependencyModule.pkgFullPath && (pkg && pkg.name)) {
         return filePath.join(
-            dependencyModule.pkg.name,
+            pkg.name + (pkg.version ? "@" + pkg.version : ""),
             filePath.relative(filePath.dirname(dependencyModule.pkgFullPath), dependency.fullPath)
         );
     } else {

@@ -1,5 +1,6 @@
 var has = require("has"),
     isString = require("is_string"),
+    isObject = require("is_object"),
     filePath = require("file_path");
 
 
@@ -13,7 +14,7 @@ function parsePackageMappings(dependency, dirname, type) {
         out = dependency.mappings,
         key, value;
 
-    if (mappings) {
+    if (isObject(mappings)) {
         for (key in mappings) {
             if (localHas(mappings, key)) {
                 value = mappings[key];

@@ -27,6 +27,7 @@ function DependencyTree(path, options) {
     this.path = path;
     this.id = getDependencyId(rootDependency, rootDependency);
     this.fullPath = rootDependency.fullPath;
+    this.dirname = filePath.dirname((rootDependency.pkgFullPath ? rootDependency.pkgFullPath : rootDependency.fullPath));
     this.options = parseOptions(options || {});
     this.dependencyHash = null;
     this.dependencies = [];
@@ -74,7 +75,7 @@ DependencyTreePrototype.addChunk = function(chunk) {
         chunks;
 
     if (this.hasChunk(id)) {
-        throw new Error("Can not have two chunks with same id " + id);
+        throw new Error("DependencyTree.addChunk(chunk) Can not have two chunks with same id " + id);
     } else {
         chunks = this.chunks;
         chunks[chunks.length] = chunk;
@@ -88,7 +89,7 @@ DependencyTreePrototype.addDependency = function(dependency) {
         dependencies, index;
 
     if (this.hasDependency(id)) {
-        throw new Error("Can not have two dependencies with same id " + id);
+        throw new Error("DependencyTree.addDependency(dependency) Can not have two dependencies with same id " + id);
     } else {
         dependencies = this.dependencies;
         index = dependencies.length;
