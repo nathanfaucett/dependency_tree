@@ -121,13 +121,13 @@ function Dependency_parse(_this, requiredFrom, parsedChunk, options) {
         _this.addDependency(dependency);
     });
 
-    if (!isNull(parsedChunk.sub)) {
-        parseSubChunks(_this, tree, parsedChunk.sub, options);
-    }
-
     arrayForEach(_this.children, function forEachDependency(dependency) {
         dependency.parse();
     });
+
+    if (!isNull(parsedChunk.sub)) {
+        parseSubChunks(_this, tree, parsedChunk.sub, options);
+    }
 
     return _this;
 }
