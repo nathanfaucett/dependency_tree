@@ -164,7 +164,8 @@ DependencyPrototype.resolve = function(requiredFrom, options) {
         this.fullPath = dependency.fullPath;
         this.pkgFullPath = dependency.pkgFullPath;
         this.pkg = dependency.pkg;
-        this.module = (this.pkg || !parent) ? this : parent.module;
+
+        this.module = this.pkg ? this : requiredFrom.module;
 
         this.id = getDependencyId(this, this.module);
 
