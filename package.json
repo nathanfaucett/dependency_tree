@@ -9,8 +9,8 @@
   "main": "src/index.js",
   "scripts": {
     "test": "npm run test-node",
-    "test-node": "node ./test | ./node_modules/.bin/tap-spec",
-    "test-node-raw": "node ./test"
+    "test-node": "node test | tap-spec",
+    "test-node-raw": "node test"
   },
   "keywords": [
     "dependency_tree",
