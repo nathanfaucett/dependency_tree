@@ -1,7 +1,7 @@
-var has = require("has"),
-    isString = require("is_string"),
-    isObject = require("is_object"),
-    filePath = require("file_path");
+var has = require("@nathanfaucett/has"),
+    isString = require("@nathanfaucett/is_string"),
+    isObject = require("@nathanfaucett/is_object"),
+    filePath = require("@nathanfaucett/file_path");
 
 
 module.exports = parsePackageMappings;

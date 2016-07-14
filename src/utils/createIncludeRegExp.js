@@ -1,4 +1,4 @@
-var isArray = require("is_array");
+var isArray = require("@nathanfaucett/is_array");
 
 
 module.exports = createIncludeRegExp;

@@ -1,4 +1,4 @@
-var filePath = require("file_path");
+var filePath = require("@nathanfaucett/file_path");
 
 
 module.exports = getDependencyId;
