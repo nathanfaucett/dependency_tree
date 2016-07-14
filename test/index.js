@@ -18,13 +18,13 @@ tape("DependencyTree(path[, options]) should parse dependency tree", function(as
         });
     });
 
-    assert.equal(filePath.relative(__dirname, chunks[0].fullPath), "lib/index.js");
-    assert.equal(filePath.relative(__dirname, chunks[0].dependencies[1].fullPath), "lib/a.js");
-    assert.equal(filePath.relative(__dirname, chunks[0].dependencies[2].fullPath), "lib/log/index.js");
+    assert.equal(filePath.relative(__dirname, chunks[0].fullPath), filePath.slash("lib/index.js"));
+    assert.equal(filePath.relative(__dirname, chunks[0].dependencies[1].fullPath), filePath.slash("lib/a.js"));
+    assert.equal(filePath.relative(__dirname, chunks[0].dependencies[2].fullPath), filePath.slash("lib/log/index.js"));
 
-    assert.equal(filePath.relative(__dirname, chunks[1].fullPath), "lib/ab/src/index.js");
-    assert.equal(filePath.relative(__dirname, chunks[1].dependencies[1].fullPath), "lib/ab/src/b.js");
-    assert.equal(filePath.relative(__dirname, chunks[1].dependencies[2].fullPath), "lib/abc.js");
+    assert.equal(filePath.relative(__dirname, chunks[1].fullPath), filePath.slash("lib/ab/src/index.js"));
+    assert.equal(filePath.relative(__dirname, chunks[1].dependencies[1].fullPath), filePath.slash("lib/ab/src/b.js"));
+    assert.equal(filePath.relative(__dirname, chunks[1].dependencies[2].fullPath), filePath.slash("lib/abc.js"));
 
     assert.end();
 });
