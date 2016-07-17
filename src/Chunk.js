@@ -13,16 +13,18 @@ function Chunk() {
     this.id = null;
     this.path = null;
     this.fullPath = null;
+    this.rootDirname = null;
     this.dependencyHash = {};
     this.dependencies = [];
 }
 
-Chunk.create = function(tree, path, fullPath, id) {
+Chunk.create = function(tree, path, fullPath, rootDirname, id) {
     var chunk = new Chunk();
 
     chunk.tree = tree;
     chunk.path = path;
     chunk.fullPath = fullPath;
+    chunk.rootDirname = rootDirname;
     chunk.id = id;
 
     return chunk;
@@ -35,6 +37,7 @@ ChunkPrototype.parse = function() {
 
     dependency.id = this.id;
     dependency.fullPath = this.fullPath;
+    dependency.rootDirname = this.rootDirname;
 
     this.addDependency(dependency).parse();
 

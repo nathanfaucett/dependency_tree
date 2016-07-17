@@ -27,7 +27,8 @@ function DependencyTree(path, options) {
     this.path = path;
     this.id = getDependencyId(rootDependency, rootDependency);
     this.fullPath = rootDependency.fullPath;
-    this.dirname = filePath.dirname((rootDependency.pkgFullPath ? rootDependency.pkgFullPath : rootDependency.fullPath));
+    this.rootDirname = filePath.dirname((rootDependency.pkgFullPath ? rootDependency.pkgFullPath : rootDependency.fullPath));
+    this.dirname = this.rootDirname;
     this.options = parseOptions(options || {});
     this.dependencyHash = null;
     this.dependencies = [];
@@ -50,7 +51,7 @@ DependencyTreePrototype.clear = function() {
 };
 
 DependencyTreePrototype.parse = function() {
-    this.clear().addChunk(Chunk.create(this, this.path, this.fullPath, this.id)).parse();
+    this.clear().addChunk(Chunk.create(this, this.path, this.fullPath, this.rootDirname, this.id)).parse();
     return this;
 };
 
@@ -62,11 +63,11 @@ DependencyTreePrototype.getChunk = function(id) {
     return this.chunkHash[id];
 };
 
-DependencyTreePrototype.createOrGetChunk = function(path, fullPath, id) {
+DependencyTreePrototype.createOrGetChunk = function(path, fullPath, rootDirname, id) {
     if (this.hasChunk(id)) {
         return this.getChunk(id);
     } else {
-        return this.addChunk(Chunk.create(this, path, fullPath));
+        return this.addChunk(Chunk.create(this, path, fullPath, rootDirname, id));
     }
 };
 

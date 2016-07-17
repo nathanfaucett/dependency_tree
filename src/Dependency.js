@@ -26,6 +26,7 @@ function Dependency() {
 
     this.path = null;
     this.fullPath = null;
+    this.rootDirname = null;
     this.pkg = null;
     this.pkgFullPath = null;
     this.mappings = {};
@@ -80,7 +81,7 @@ function parseSubChunks(parent, tree, subChunks, options) {
         if (localHas(subChunks, path)) {
             dependency = Dependency.create(null, path, parent).resolve(parent, options);
 
-            subChunk = tree.createOrGetChunk(path, dependency.fullPath, dependency.id);
+            subChunk = tree.createOrGetChunk(path, dependency.fullPath, dependency.rootDirname, dependency.id);
 
             if (tree.hasDependency(dependency.id)) {
                 dependency = tree.getDependency(dependency.id);
@@ -163,6 +164,7 @@ DependencyPrototype.resolve = function(requiredFrom, options) {
 
         this.fullPath = dependency.fullPath;
         this.pkgFullPath = dependency.pkgFullPath;
+        this.rootDirname = requiredFrom.rootDirname;
         this.pkg = dependency.pkg;
 
         this.module = this.pkg ? this : requiredFrom.module;
