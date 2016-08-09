@@ -69,21 +69,23 @@ function parseAsyncChunk(chunk, path, string, reInclude) {
 
 function getLastIndexOf(string, index) {
     var length = string.length,
-        canBreak = false;
+        foundFirst = false,
+        brackets = 0;
 
     while (index < length) {
-        ch = string.charAt(index);
+        ch = string.charAt(index++);
 
-        if (canBreak) {
-            break;
-        } else {
-            if (ch === "{") {
-                canBreak = false;
-            } else if (ch === "}") {
-                canBreak = true;
+        if (ch === "{") {
+            if (foundFirst === false) {
+                foundFirst = true;
             }
+            brackets++;
+        } else if (ch === "}") {
+            brackets--;
+        }
 
-            index += 1;
+        if (foundFirst && brackets === 0) {
+            break;
         }
     }
 
