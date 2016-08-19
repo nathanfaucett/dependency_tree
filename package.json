@@ -1,6 +1,6 @@
 {
   "name": "@nathanfaucett/dependency_tree",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "commonjs style dependency tree parser",
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
     "@nathanfaucett/is_object": "^0.0.1",
     "@nathanfaucett/is_string": "^0.0.1",
     "@nathanfaucett/mixin": "^0.0.1",
-    "@nathanfaucett/resolve": "^0.0.1",
+    "@nathanfaucett/resolve": "^0.0.3",
     "semver": "^5.2.0"
   }
 }
