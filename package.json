@@ -1,6 +1,6 @@
 {
   "name": "@nathanfaucett/dependency_tree",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "commonjs style dependency tree parser",
   "repository": {
     "type": "git",
